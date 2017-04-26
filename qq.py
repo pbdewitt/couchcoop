@@ -447,13 +447,10 @@ TILE_CACHE = TileCache(32, 32)
 pygame.init()
 pygame.display.set_mode((424, 320))
 g = Game()
-def main():
-    global g
-    g.main()
 def run_app():
     return app.run(host='0.0.0.0',port=80)
 t = Thread(target=run_app)
 t.daemon = True
 t.start()
 #app.run(threaded=True)
-main()
+g.main()
