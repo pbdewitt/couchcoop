@@ -215,6 +215,14 @@ class Player(Sprite):
             self.move(3*DX[self.direction], 2*DY[self.direction])
             yield None
             self.move(3*DX[self.direction], 2*DY[self.direction])
+    def walk(self, d):
+        """Start walking in specified direction."""
+        global g
+
+        x, y = self.pos
+        self.direction = d
+        if not g.level.is_blocking(x+DX[d], y+DY[d]):
+            self.animation = self.walk_animation()
 
     def update(self, *args):
         """Run the current animation or just stand there if no animation set."""
@@ -351,6 +359,15 @@ class Game(object):
         self.sprites = SortedUpdates()
         self.overlays = pygame.sprite.RenderUpdates()
         self.use_level(Level())
+        self.players = {}
+        sprite = Player(self.level.start_pos)
+        self.add_player("player1")
+
+    def add_player(self, name):
+        sprite = Player(self.level.start_pos)
+        self.players[name] = sprite
+        self.sprites.add(sprite)
+        self.shadows.add(Shadow(sprite))
 
     def use_level(self, level):
         """Set the level as the current one."""
@@ -362,8 +379,7 @@ class Game(object):
         # Populate the game with the level's objects
         for pos, tile in level.items.iteritems():
             if tile.get("player") in ('true', '1', 'yes', 'on'):
-                sprite = Player(pos)
-                self.player = sprite
+                level.start_pos = pos
             else:
                 sprite = Sprite(pos, SPRITE_CACHE[tile["sprite"]])
             self.sprites.add(sprite)
@@ -385,23 +401,17 @@ class Game(object):
             """Check if the specified key is pressed."""
 
             return self.pressed_key == key or keys[key]
+        p = self.players["player1"]
 
-        def walk(d):
-            """Start walking in specified direction."""
-
-            x, y = self.player.pos
-            self.player.direction = d
-            if not self.level.is_blocking(x+DX[d], y+DY[d]):
-                self.player.animation = self.player.walk_animation()
 
         if pressed(pg.K_UP):
-            walk(0)
+            p.walk(0)
         elif pressed(pg.K_DOWN):
-            walk(2)
+            p.walk(2)
         elif pressed(pg.K_LEFT):
-            walk(3)
+            p.walk(3)
         elif pressed(pg.K_RIGHT):
-            walk(1)
+            p.walk(1)
         self.pressed_key = None
 
     def main(self):
@@ -418,9 +428,11 @@ class Game(object):
             self.sprites.clear(self.screen, self.background)
             self.sprites.update()
             # If the player's animation is finished, check for keypresses
-            if self.player.animation is None:
-                self.control()
-                self.player.update()
+            for name in self.players:
+                p = self.players[name]
+                if p.animation is None:
+                    self.control()
+                    p.update()
             self.shadows.update()
             # Don't add shadows to dirty rectangles, as they already fit inside
             # sprite rectangles.
