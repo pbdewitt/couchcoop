@@ -23,7 +23,7 @@ import ConfigParser
 import pygame
 import pygame.locals as pg
 from Queue import Queue
-from flask import Flask
+from flask import Flask, session, redirect, url_for, escape, request
 from threading import Thread
 
 q = Queue()
@@ -45,8 +45,23 @@ control_page="""
 """
 @app.route('/')
 def landing_page():
-    #main()
-    return control_page
+    if 'username' in session:
+        return control_page
+    return redirect(url_for('login'))
+
+@app.route('/login', methods=['GET', 'POST'])
+def login():
+    if request.method == 'POST':
+        session['username'] = request.form['username']
+        g.add_player(session['username'])
+        return redirect(url_for('landing_page'))
+    return '''
+        <form method ="post">
+            <p><input type=text name=username>
+            <p><input type=submit value=Login>
+        </form>
+    '''
+app.secret_key = 'secret2'
 @app.route('/quit')
 def game_quit():
     global g
@@ -60,22 +75,26 @@ def walk(d):
     g.player.direction = d
     if not g.level.is_blocking(x+DX[d], y+DY[d]):
         g.player.animation = g.player.walk_animation()
+
+def do_walk(d):
+    try:
+        g.players[session['username']].walk(d)
+    except KeyError:
+        pass
+    return redirect(url_for('landing_page'))
+
 @app.route('/up')
 def game_up():
-    walk(0)
-    return control_page
+    return do_walk(0)
 @app.route('/down')
 def game_down():
-    walk(2)
-    return control_page
+    return do_walk(2)
 @app.route('/left')
 def game_left():
-    walk(3)
-    return control_page
+    return do_walk(3)
 @app.route('/right')
 def game_right():
-    walk(1)
-    return control_page
+    return do_walk(1)
 # Motion offsets for particular directions
 #     N  E  S   W
 DX = [0, 1, 0, -1]
